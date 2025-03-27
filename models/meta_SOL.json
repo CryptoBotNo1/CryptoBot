@@ -1,0 +1,16 @@
+{
+  "features": [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "Volume",
+    "SMA_10",
+    "EMA_10",
+    "RSI",
+    "MACD",
+    "BB_upper",
+    "BB_lower",
+    "OBV"
+  ]
+}

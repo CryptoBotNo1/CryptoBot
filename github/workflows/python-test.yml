@@ -1,0 +1,35 @@
+name: CryptoBot CI # Numele workflow-ului (apare în tab-ul Actions)
+
+# Când se declanșează workflow-ul:
+on:
+  push: # La orice push către repository
+    branches: [ main ] # Doar pentru branch-ul 'main' (sau cum se numește la tine)
+  pull_request: # La orice pull request către branch-ul 'main'
+    branches: [ main ]
+
+jobs: # Lista de "joburi" de rulat
+  build-and-test: # Numele jobului (poate fi orice)
+    runs-on: ubuntu-latest # Pe ce tip de mașină virtuală să ruleze (Linux e comun)
+
+    strategy:
+      matrix:
+        # Opțional: Rulează testele pe mai multe versiuni Python
+        python-version: ["3.11"] # Poți adăuga "3.12", etc. dacă vrei
+
+    steps: # Pașii executați în cadrul jobului
+    - name: Checkout repository # Pasul 1: Descarcă codul din repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }} # Pasul 2: Instalează versiunea Python specificată
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies # Pasul 3: Instalează bibliotecile necesare
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Test with pytest # Pasul 4: Rulează testele
+      run: |
+        pytest

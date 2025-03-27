@@ -1,0 +1,20 @@
+{
+  "BTC": {
+    "version": "e84f5cde",
+    "last_trained": "2025-03-24 01:08:43",
+    "metrics": {
+      "MAE": 1329.4857741311603,
+      "RMSE": 1549.5982130231184,
+      "R2": 0.4464892794876614,
+      "MAPE": 0.01495981064450829,
+      "Theil's U": 0.6166411272534961,
+      "Directional Accuracy": 0.7142857142857143,
+      "Backtest Return": 45004.5234375,
+      "Sharpe Ratio": 6.300945179245569,
+      "Win Rate": 0.6590909090909091
+    },
+    "model_file": "models\\BTC_e84f5cde_lstm.pt",
+    "scaler_file": "models\\BTC_e84f5cde_scaler.pkl",
+    "loss_plot": "models\\BTC_e84f5cde_loss.png"
+  }
+}

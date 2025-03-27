@@ -1,0 +1,41 @@
+# Virtual Environment
+venv/
+.venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Sensitive info - IMPORTANT
+.env
+*.env
+
+# Databases - Nu vrem baza de date în Git de obicei
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache and Logs - Fișiere temporare sau de rulare
+cache/
+*.log
+logs/
+debug.log*
+*.log.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Pytest cache
+.pytest_cache/
+
+# IDE / Editor specific files (example for VS Code)
+.vscode/
