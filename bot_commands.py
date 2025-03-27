@@ -1,7 +1,7 @@
-# bot_commands.py
+# bot_commands.py - Corectat Final (v5 - Verificare finală 'compare')
 import logging
 from datetime import datetime, timedelta
-import asyncio # Păstrăm asyncio dacă e folosit altundeva, sau îl putem șterge dacă nu
+import asyncio
 import aiohttp
 import yfinance as yf
 import pandas as pd
@@ -17,7 +17,7 @@ import config
 import ai_utils
 import data_utils
 import portfolio_utils
-import plot_utils
+import plot_utils # Importăm plot_utils
 
 logger = logging.getLogger(__name__)
 
@@ -37,21 +37,24 @@ def is_valid_days(days_str: str) -> bool:
 # --- Funcție Helper Sentry Context ---
 def _set_sentry_user_context(update: Optional[Update]):
     """Setează contextul utilizatorului în Sentry dacă update conține user."""
-    if update and update.effective_user:
-        sentry_sdk.set_user({"id": str(update.effective_user.id)})
-    else:
-        sentry_sdk.set_user(None) # Resetează contextul user dacă nu există
+    # Verificam daca sentry_sdk a fost initializat cu succes inainte de a-l folosi
+    # (presupunem ca hub/client exista daca init a rulat fara erori critice)
+    if config.SENTRY_DSN and hasattr(sentry_sdk, 'Hub') and sentry_sdk.Hub.current.client:
+        if update and update.effective_user:
+            sentry_sdk.set_user({"id": str(update.effective_user.id)})
+        else:
+            sentry_sdk.set_user(None) # Resetează contextul user dacă nu există
 
 # --- Handlere Comenzi Telegram ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /start."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     await update.message.reply_text("👋 Salut! Sunt botul tău AI pentru crypto.\nFolosește /help pentru lista completă de comenzi.")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /help."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     user_id = update.effective_user.id if update.effective_user else "Unknown"
     logger.info(f"/help command requested by user {user_id}")
     try:
@@ -84,12 +87,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"Help message sent successfully to user {user_id}")
     except Exception as e:
         logger.error(f"Error sending /help message to user {user_id}: {e}", exc_info=True)
-        sentry_sdk.capture_exception(e) # Capturează eroarea manual dacă dorim
+        sentry_sdk.capture_exception(e)
         await update.message.reply_text("❌ Oops! A apărut o eroare la afișarea comenzilor.")
 
 async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /predict."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     if len(context.args) != 2: await update.message.reply_text(f"❌ Format incorect. Exemplu: `/predict BTC 7`"); return
     symbol = context.args[0].upper(); days_str = context.args[1]
     if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbol '{symbol}' nesuportat. Folosește /help."); return
@@ -107,10 +110,10 @@ async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def predict_chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /predict_chart."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     if len(context.args) != 2: await update.message.reply_text(f"❌ Format: `/predict_chart ETH 5`"); return
     symbol = context.args[0].upper(); days_str = context.args[1]
-    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbol '{symbol}' nesuportat."); return
+    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbolul '{symbol}' nesuportat."); return
     if not is_valid_days(days_str): await update.message.reply_text(f"❌ Nr. zile invalid (1-{config.PREDICT_MAX_DAYS})."); return
     days = int(days_str)
     await update.message.reply_text(f"🔄 Generare grafic AI pentru {symbol} ({days} zile)...")
@@ -126,7 +129,7 @@ async def predict_chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /news."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     await update.message.reply_text(f"🔄 Căutare ultimelor {config.NEWS_COUNT} știri crypto (RSS)...")
     try:
         tasks = [data_utils.parse_rss_feed(feed_info) for feed_info in config.RSS_FEEDS]
@@ -164,10 +167,10 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /summary."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     if len(context.args) != 1: await update.message.reply_text("❌ Format: `/summary BTC`"); return
     symbol = context.args[0].upper()
-    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbol '{symbol}' nesuportat."); return
+    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbolul '{symbol}' nesuportat."); return
     await update.message.reply_text(f"🔄 Generare sumar pentru {symbol}...")
     live_price_str, trend_msg, pred_msg = "N/A", "N/A", "N/A"
     async with aiohttp.ClientSession() as session:
@@ -204,7 +207,7 @@ async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /crypto."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     if len(context.args) != 1: await update.message.reply_text("❌ Format: `/crypto BTC`"); return
     symbol = context.args[0].upper()
     await update.message.reply_text(f"🔄 Căutare date live 24h {symbol}USDT pe Binance...")
@@ -233,10 +236,10 @@ _(Sursa: Binance)_"""
 
 async def grafic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /grafic."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     if len(context.args) != 1: await update.message.reply_text(f"❌ Format: `/grafic BTC`"); return
     symbol = context.args[0].upper()
-    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbol '{symbol}' nesuportat."); return
+    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbolul '{symbol}' nesuportat."); return
     await update.message.reply_text(f"🔄 Generare grafic preț {symbol} ({config.CHART_DAYS} zile)...")
     try:
         df = yf.download(f"{symbol}-USD", period=f"{config.CHART_DAYS}d", interval="1d", progress=False, auto_adjust=True)
@@ -248,10 +251,10 @@ async def grafic(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def trend(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /trend."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     if len(context.args) != 1: await update.message.reply_text(f"❌ Format: `/trend BTC`"); return
     symbol = context.args[0].upper()
-    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbol '{symbol}' nesuportat."); return
+    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbolul '{symbol}' nesuportat."); return
     await update.message.reply_text(f"🔄 Analiză trend {symbol} ({config.TREND_DAYS} zile)...")
     logger.info(f"Pornire calcul trend pentru {symbol}")
     try:
@@ -271,31 +274,55 @@ async def trend(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg, parse_mode="Markdown")
     except Exception as e: logger.error(f"Eroare majoră /trend {symbol}: {e}", exc_info=True); await update.message.reply_text("❌ Eroare analiză trend.")
 
+# --- Funcția compare CORECTATĂ DEFINITIV ---
 async def compare(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handler pentru comanda /compare."""
-    _set_sentry_user_context(update) # Setează context user
+    """Handler pentru comanda /compare (VERSIUNE CORECTATĂ)."""
+    _set_sentry_user_context(update)
     if len(context.args) != 2: await update.message.reply_text("❌ Format: `/compare BTC ETH`"); return
     sym1, sym2 = context.args[0].upper(), context.args[1].upper()
-    if not is_valid_symbol(sym1): await update.message.reply_text(f"❌ Simbol '{sym1}' nesuportat."); return
-    if not is_valid_symbol(sym2): await update.message.reply_text(f"❌ Simbol '{sym2}' nesuportat."); return
+    if not is_valid_symbol(sym1): await update.message.reply_text(f"❌ Simbolul '{sym1}' nesuportat."); return
+    if not is_valid_symbol(sym2): await update.message.reply_text(f"❌ Simbolul '{sym2}' nesuportat."); return
     if sym1 == sym2: await update.message.reply_text("❌ Alege simboluri diferite."); return
+
     await update.message.reply_text(f"🔄 Generare grafic comparativ {sym1} vs {sym2} ({config.CHART_DAYS} zile)...")
     try:
-        df1 = yf.download(f"{sym1}-USD", period=f"{config.CHART_DAYS}d", interval="1d", progress=False, auto_adjust=True)["Close"]
-        df2 = yf.download(f"{sym2}-USD", period=f"{config.CHART_DAYS}d", interval="1d", progress=False, auto_adjust=True)["Close"]
-        missing = [s for s, d in zip([sym1, sym2], [df1, df2]) if d.empty]
-        if missing: await update.message.reply_text(f"❌ Eroare date yfinance: {', '.join(missing)}."); return
-        buf = plot_utils.generate_comparison_plot(sym1, sym2, df1, df2, config.CHART_DAYS)
-        if buf.getbuffer().nbytes == 0: await update.message.reply_text("❌ Eroare internă generare imagine grafic."); return
-        await update.message.reply_photo(photo=InputFile(buf, filename=f"{sym1}_vs_{sym2}_{config.CHART_DAYS}d_compare.png"), caption=f"Comparație preț {sym1} vs {sym2} - {config.CHART_DAYS} zile")
-    except Exception as e: logger.error(f"Eroare /compare {sym1} vs {sym2}: {e}", exc_info=True); await update.message.reply_text("❌ Eroare grafic comparativ.")
+        # Descărcăm datele complete mai întâi
+        df1_full = yf.download(f"{sym1}-USD", period=f"{config.CHART_DAYS}d", interval="1d", progress=False, auto_adjust=True)
+        df2_full = yf.download(f"{sym2}-USD", period=f"{config.CHART_DAYS}d", interval="1d", progress=False, auto_adjust=True)
+
+        # Verificăm dacă DF-urile sunt goale ÎNAINTE de a accesa ["Close"]
+        missing = []
+        if df1_full.empty: missing.append(sym1)
+        if df2_full.empty: missing.append(sym2)
+        if missing:
+            logger.warning(f"Date yfinance lipsă pentru /compare: {', '.join(missing)}")
+            await update.message.reply_text(f"❌ Eroare date yfinance: {', '.join(missing)}.")
+            return
+
+        # Extragem coloana 'Close' doar dacă DF-urile sunt valide
+        df1_close = df1_full["Close"]
+        df2_close = df2_full["Close"]
+
+        # Generăm și trimitem graficul
+        buf = plot_utils.generate_comparison_plot(sym1, sym2, df1_close, df2_close, config.CHART_DAYS)
+        if buf.getbuffer().nbytes == 0:
+            await update.message.reply_text("❌ Eroare internă generare imagine grafic.")
+            return
+
+        await update.message.reply_photo(
+            photo=InputFile(buf, filename=f"{sym1}_vs_{sym2}_{config.CHART_DAYS}d_compare.png"),
+            caption=f"Comparație preț {sym1} vs {sym2} - {config.CHART_DAYS} zile"
+        )
+    except Exception as e:
+        logger.error(f"Eroare majoră /compare {sym1} vs {sym2}: {e}", exc_info=True)
+        await update.message.reply_text("❌ Eroare grafic comparativ.")
 
 async def portfolio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /portfolio. Folosește portfolio_utils."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     if len(context.args) != 2: await update.message.reply_text("❌ Format: `/portfolio BTC 0.5` sau `/portfolio BTC 0`"); return
     user_id = str(update.effective_user.id); symbol = context.args[0].upper(); amount_str = context.args[1].replace(',', '.')
-    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbol '{symbol}' nesuportat."); return
+    if not is_valid_symbol(symbol): await update.message.reply_text(f"❌ Simbolul '{symbol}' nesuportat."); return
     try: amount = float(amount_str); assert amount >= 0
     except (ValueError, AssertionError): await update.message.reply_text("❌ Cantitate invalidă (nr. pozitiv sau 0)."); return
     success = await portfolio_utils.add_or_update_holding(user_id, symbol, amount)
@@ -306,7 +333,7 @@ async def portfolio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def myportfolio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handler pentru comanda /myportfolio. Folosește portfolio_utils."""
-    _set_sentry_user_context(update) # Setează context user
+    _set_sentry_user_context(update)
     user_id = str(update.effective_user.id)
     await update.message.reply_text("🔄 Încărcare și evaluare portofoliu din baza de date...")
     user_holdings = await portfolio_utils.get_user_holdings(user_id)
@@ -327,6 +354,3 @@ async def myportfolio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Eroare evaluare /myportfolio user {user_id}: {e}", exc_info=True)
         await update.message.reply_text("❌ Eroare la evaluarea valorii portofoliului.")
-
-
-# --- Funcția Temporară test_error ESTE ȘTEARSĂ din această versiune finală ---
