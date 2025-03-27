@@ -1,4 +1,4 @@
-# tests/test_bot_commands.py - Corectat Final (v4 - Sper!)
+# tests/test_bot_commands.py - Corectat Final (v7 - Revert /crypto not found test)
 import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, call, patch
@@ -81,17 +81,11 @@ async def test_predict_command_success(mocker, mock_update_message, mock_context
 
 @pytest.mark.asyncio
 async def test_predict_command_invalid_symbol(mocker, mock_update_message, mock_context):
-    """Testează /predict cu un simbol invalid."""
-    mock_update, mock_message = mock_update_message
-    symbol = "INVALID"; days = 5
+    mock_update, mock_message = mock_update_message; symbol = "INVALID"; days = 5
     mock_update.effective_user = User(id=789, first_name="InvUser", is_bot=False)
-    mock_context.args = [symbol, str(days)]
-    mocker.patch("bot_commands.is_valid_symbol", return_value=False) # Mock is_valid_symbol să returneze False
-    await predict(mock_update, mock_context)
-    mock_message.reply_text.assert_called_once()
-    # --- FIX Definitiv: Textul așteptat corect, FĂRĂ 'ul' ---
+    mock_context.args = [symbol, str(days)]; mocker.patch("bot_commands.is_valid_symbol", return_value=False)
+    await predict(mock_update, mock_context); mock_message.reply_text.assert_called_once()
     expected_error_text = f"❌ Simbol '{symbol}' nesuportat. Folosește /help."
-    # ------------------------------------------------------
     actual_text = mock_message.reply_text.call_args.args[0]
     assert actual_text == expected_error_text
 
@@ -227,11 +221,19 @@ async def test_crypto_command_success(mock_update_message, mock_context):
 
 @pytest.mark.asyncio
 async def test_crypto_command_not_found(mock_update_message, mock_context):
+    """Testează /crypto pentru un simbol negăsit pe Binance (așteptând mesajul specific pt 400)."""
     symbol = "NOTFOUND"; mock_update, mock_message = mock_update_message; mock_context.args = [symbol]
     url = f"{config.BINANCE_API_BASE}/ticker/24hr?symbol={symbol}USDT"
-    with aioresponses() as m: m.get(url, status=400)
-    await crypto(mock_update, mock_context); assert mock_message.reply_text.call_count == 2
+    simulated_status = 400 # Simulăm 400
+
+    with aioresponses() as m:
+        m.get(url, status=simulated_status)
+        await crypto(mock_update, mock_context)
+
+    assert mock_message.reply_text.call_count == 2
+    # --- FIX: Revenim la așteptarea mesajului specific pentru status 400 ---
     expected_error_text = f"❌ '{symbol}USDT' negăsit pe Binance."
+    # --------------------------------------------------------------------
     actual_text = mock_message.reply_text.call_args_list[1].args[0]
     assert actual_text == expected_error_text
 
@@ -313,14 +315,10 @@ async def test_compare_yf_fails(mocker, mock_update_message, mock_context):
     """Testează /compare când unul din apelurile yf.download eșuează."""
     mock_update, mock_message = mock_update_message; sym1 = "MOK"; sym2 = "MFAIL"
     mock_context.args = [sym1, sym2]; mocker.patch("bot_commands.is_valid_symbol", return_value=True)
-    # FIX: Primul returnează DataFrame, al doilea DataFrame gol
     df1_close_data = pd.Series(np.random.rand(config.CHART_DAYS), name='Close')
     mock_df1 = pd.DataFrame(df1_close_data)
     mock_yf = mocker.patch("bot_commands.yf.download", side_effect=[mock_df1, pd.DataFrame()]) # Al doilea e DF gol
-    # ---------------------------------------------
     mock_plot = mocker.patch("bot_commands.plot_utils.generate_comparison_plot")
     await compare(mock_update, mock_context); assert mock_yf.call_count == 2
     assert mock_message.reply_text.call_count == 2; assert f"❌ Eroare date yfinance: {sym2}" in mock_message.reply_text.call_args_list[1].args[0]
     mock_plot.assert_not_called(); mock_message.reply_photo.assert_not_called()
-
-# --- Aici se termină codul fișierului tests/test_bot_commands.py ---
